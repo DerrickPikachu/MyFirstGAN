@@ -39,6 +39,7 @@ def get_iCLEVR_data(root_folder, mode):
 class ICLEVRLoader(data.Dataset):
     def __init__(self, root_folder, trans=None, cond=False, mode='train'):
         self.root_folder = root_folder
+        self.trans = trans
         self.mode = mode
         # img_list contain the filename when the mode is train,
         # otherwise it will just be None
@@ -66,6 +67,9 @@ class ICLEVRLoader(data.Dataset):
             label = self.label_list[index]
         else:
             label = self.label_list[index]
+
+        if self.trans is not None and torch_img is not None:
+            torch_img = self.trans(torch_img)
 
         return torch_img, label
 
