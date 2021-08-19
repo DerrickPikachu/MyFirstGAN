@@ -5,6 +5,7 @@ from torchvision import transforms
 from PIL import Image
 import os
 import numpy as np
+from imgTransform import ImgToTorch
 
 
 def get_iCLEVR_data(root_folder, mode):
@@ -37,7 +38,7 @@ def get_iCLEVR_data(root_folder, mode):
 
 
 class ICLEVRLoader(data.Dataset):
-    def __init__(self, root_folder, trans=None, cond=False, mode='train'):
+    def __init__(self, root_folder, trans=ImgToTorch(), cond=False, mode='train'):
         self.root_folder = root_folder
         self.trans = trans
         self.mode = mode
@@ -57,21 +58,20 @@ class ICLEVRLoader(data.Dataset):
         return len(self.label_list)
 
     def __getitem__(self, index):
-        torch_img = None
+        img = None
 
         if self.mode == 'train':
             img = Image.open('./images/' + self.img_list[index])
             resized_img = img.convert('RGB').resize((64, 64))
-            narray = np.array(resized_img)
-            torch_img = torch.from_numpy(narray)
+            img = np.array(resized_img)
             label = self.label_list[index]
         else:
             label = self.label_list[index]
 
-        if self.trans is not None and torch_img is not None:
-            torch_img = self.trans(torch_img)
+        if img is not None:
+            img = self.trans(img).type(torch.float)
 
-        return torch_img, label
+        return img, torch.from_numpy(label).type(torch.float)
 
 
 if __name__ == '__main__':

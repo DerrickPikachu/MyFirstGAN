@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from dataset import ICLEVRLoader
 
 
 class CGenerator(nn.Module):
@@ -66,7 +67,26 @@ class CDiscriminator(nn.Module):
 
     def forward(self, input):
         img, condition = input
-        condition = self.condition_layer(condition)
+        condition = self.condition_layer(condition).view(-1, 3, 64, 64)
         cond_img = torch.cat([img, condition], dim=1)
         output = self.discriminator_layer(cond_img)
         return output
+
+
+if __name__ == "__main__":
+    data = ICLEVRLoader('jsonfile')
+    # img, label = data[10]
+
+    # latent = torch.randn(100, dtype=torch.float)
+    # generator = CGenerator(100)
+    # generated_img = generator((latent, label)).view(3, 64, 64)
+    # import matplotlib.pyplot as plt
+    # generated_img = generated_img.detach().numpy().transpose((1, 2, 0))
+    # plt.imshow(generated_img)
+    # plt.show()
+    # print(img)
+
+    # img = img.view(-1, 3, 64, 64)
+    # discriminator = CDiscriminator()
+    # output = discriminator((img, label))
+    # print(output)
