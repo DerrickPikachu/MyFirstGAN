@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from dataset import ICLEVRLoader
-from parameter import gf_size, df_size
+from parameter import gf_size, df_size, device
 
 
 def weights_init(m):
@@ -11,6 +11,11 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+
+
+def setup_model(net: nn.Module):
+    net = net.to(device)
+    net.apply(weights_init)
 
 
 class CGenerator(nn.Module):
@@ -87,7 +92,7 @@ class Generator(nn.Module):
     def __init__(self, nz):
         super(Generator, self).__init__()
 
-        self.main_layer = nn.Sequential(
+        self.main = nn.Sequential(
             nn.ConvTranspose2d(nz, gf_size * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(gf_size * 8),
             nn.ReLU(True),
@@ -100,7 +105,11 @@ class Generator(nn.Module):
             nn.BatchNorm2d(gf_size * 2),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(gf_size * 2, 3, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(gf_size * 2, gf_size, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(gf_size),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(gf_size, 3, 4, 2, 1, bias=False),
             nn.Tanh()
         )
 
