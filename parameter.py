@@ -5,4 +5,4 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 latent_size = 100
 lr = 0.01
 epochs = 300
-batch_size = 16
+batch_size = 8

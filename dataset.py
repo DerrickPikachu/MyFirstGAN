@@ -70,6 +70,8 @@ class ICLEVRLoader(data.Dataset):
 
         if img is not None:
             img = self.trans(img).type(torch.float)
+        else:
+            img = 0
 
         return img, torch.from_numpy(label).type(torch.float)
 

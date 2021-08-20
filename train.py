@@ -6,16 +6,20 @@ from dataset import ICLEVRLoader
 import parameter
 from parameter import device
 from model import *
+from evaluator import evaluation_model
+import matplotlib.pyplot as plt
 
 
 def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader, loss_f):
+    eval_model = evaluation_model()
+
     for e in range(1, parameter.epochs + 1):
         print(f'Epoch {e}/{parameter.epochs}:')
         print('-' * 10)
 
         for img, label in tqdm(dataloader):
-            img.to(device)
-            label.to(device)
+            img = img.to(device)
+            label = label.to(device)
 
             ##############################################
             #                Discriminator               #
@@ -50,10 +54,35 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader, 
             g_loss.backward()
             g_optimizer.step()
 
+        ##############################################
+        #               Evaluate model               #
+        ##############################################
+        acc, img = test_model(generator, eval_model)
+        print(f'acc: {acc}')
+        img = img.detach().cpu().numpy().transpose((1, 2, 0))
+        plt.imshow(img)
+        plt.show()
+
+
+def test_model(generator, eval_model):
+    generator.eval()
+
+    test_data = ICLEVRLoader('jsonfile', mode='test')
+    test_loader = DataLoader(test_data, batch_size=len(test_data))
+    acc = 0
+
+    for _, label in test_loader:
+        label = label.to(device)
+        latent = torch.randn(label.size(0), parameter.latent_size, device=device, dtype=torch.float)
+        generated_img = generator((latent, label))
+        acc = eval_model.eval(generated_img, label)
+
+    return acc, generated_img[0].view(3, 64, 64)
+
 
 if __name__ == "__main__":
-    g = CGenerator(parameter.latent_size)
-    d = CDiscriminator()
+    g = CGenerator(parameter.latent_size).to(device)
+    d = CDiscriminator().to(device)
 
     g_opt = torch.optim.SGD(g.parameters(), lr=parameter.lr)
     d_opt = torch.optim.SGD(d.parameters(), lr=parameter.lr)
@@ -64,4 +93,9 @@ if __name__ == "__main__":
     loader = DataLoader(data, batch_size=parameter.batch_size)
 
     train_model(g, d, g_opt, d_opt, loader, loss_f)
+
+    # eval_model = evaluation_model()
+    # test_model(g, eval_model)
+
+
 
