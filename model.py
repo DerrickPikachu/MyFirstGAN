@@ -1,6 +1,16 @@
 import torch
 from torch import nn
 from dataset import ICLEVRLoader
+from parameter import gf_size, df_size
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
 
 
 class CGenerator(nn.Module):
@@ -71,6 +81,59 @@ class CDiscriminator(nn.Module):
         cond_img = torch.cat([img, condition], dim=1)
         output = self.discriminator_layer(cond_img)
         return output
+
+
+class Generator(nn.Module):
+    def __init__(self, nz):
+        super(Generator, self).__init__()
+
+        self.main_layer = nn.Sequential(
+            nn.ConvTranspose2d(nz, gf_size * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(gf_size * 8),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(gf_size * 8, gf_size * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(gf_size * 4),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(gf_size * 4, gf_size * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(gf_size * 2),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(gf_size * 2, 3, 4, 2, 1, bias=False),
+            nn.Tanh()
+        )
+
+    def forward(self, input):
+        return self.main(input)
+
+
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+
+        self.main = nn.Sequential(
+            nn.Conv2d(3, df_size, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(df_size, df_size * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(df_size * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(df_size * 2, df_size * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(df_size * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(df_size * 4, df_size * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(df_size * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(df_size * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input):
+        return self.main(input)
 
 
 if __name__ == "__main__":

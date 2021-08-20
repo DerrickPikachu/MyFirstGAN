@@ -1,11 +1,15 @@
 import json
 import torch
 from torch.utils import data
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from PIL import Image
 import os
 import numpy as np
 from imgTransform import ImgToTorch
+from parameter import image_size, batch_size, workers
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 
 def get_iCLEVR_data(root_folder, mode):
@@ -38,7 +42,7 @@ def get_iCLEVR_data(root_folder, mode):
 
 
 class ICLEVRLoader(data.Dataset):
-    def __init__(self, root_folder, trans=ImgToTorch(), cond=False, mode='train'):
+    def __init__(self, root_folder, trans, cond=False, mode='train'):
         self.root_folder = root_folder
         self.trans = trans
         self.mode = mode
@@ -62,8 +66,7 @@ class ICLEVRLoader(data.Dataset):
 
         if self.mode == 'train':
             img = Image.open('./images/' + self.img_list[index])
-            resized_img = img.convert('RGB').resize((64, 64))
-            img = np.array(resized_img)
+            img = img.convert('RGB')
             label = self.label_list[index]
         else:
             label = self.label_list[index]
@@ -77,10 +80,25 @@ class ICLEVRLoader(data.Dataset):
 
 
 if __name__ == '__main__':
-    dataset = ICLEVRLoader('./jsonfile/')
-    torch_img, _ = dataset[10]
-    array = torch_img.numpy()
-    import matplotlib.pyplot as plt
-    plt.imshow(array)
+    dataset = ICLEVRLoader('./jsonfile/', trans=transforms.Compose([
+        transforms.Resize((image_size, image_size)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ]), mode='train')
+
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
+
+    real_batch = next(iter(dataloader))
+    plt.figure(figsize=(8, 8))
+    plt.axis('off')
+    plt.title('Training Images')
+    plt.imshow(np.transpose(vutils.make_grid(real_batch[0][:64], padding=2, normalize=True), (1, 2, 0)))
     plt.show()
+    print(dataset[0].size)
+
+    # torch_img, _ = dataset[10]
+    # array = torch_img.numpy()
+    # import matplotlib.pyplot as plt
+    # plt.imshow(array)
+    # plt.show()
     # img.show()
