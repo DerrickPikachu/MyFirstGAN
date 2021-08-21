@@ -17,9 +17,14 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
     eval_model = evaluation_model()
 
     for e in range(1, parameter.epochs + 1):
+        generator.train()
+        discriminator.train()
         print(f'Epoch {e}/{parameter.epochs}:')
-        print('-' * 10)
         iter = 0
+
+        if e == 30:
+            g_optimizer = torch.optim.Adam(generator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
+            d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
 
         for img, label in tqdm(dataloader):
             img = img.to(device)
@@ -37,7 +42,7 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
             # Setup target
             real_target = torch.full((b_size,), 1, dtype=torch.float, device=device)
             # discriminator predict and calculate loss
-            output = discriminator(img).view(-1)
+            output = discriminator((img, label)).view(-1)
             real_loss = loss_f(output, real_target)
             # Calculate gradient
             real_loss.backward()
@@ -45,10 +50,10 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
             # Train with fake image data
             # Generate fake img
             noise = torch.randn(b_size, parameter.latent_size, 1, 1, device=device)
-            fake_img = generator(noise)
+            fake_img = generator((noise, label))
             fake_target = torch.full((b_size,), 0, dtype=torch.float, device=device)
             # Calculate fake img loss
-            output = discriminator(fake_img.detach()).view(-1)
+            output = discriminator((fake_img.detach(), label)).view(-1)
             fake_loss = loss_f(output, fake_target)
             # Calculate gradient
             fake_loss.backward()
@@ -63,39 +68,51 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
             # Setup generator and target
             generator.zero_grad()
             g_target = torch.full((b_size,), 1, dtype=torch.float, device=device)
-            # Calculate loss
-            output = discriminator(fake_img).view(-1)
+            # Recalculate loss with updated discriminator
+            output = discriminator((fake_img, label)).view(-1)
             g_loss = loss_f(output, g_target)
             # Update generator
             g_loss.backward()
             g_optimizer.step()
 
-            ##############################################
-            #               Evaluate model               #
-            ##############################################
-            if iter % 50 == 0:
-                with torch.no_grad():
-                    fake = generator(parameter.fixed_noise).detach().cpu()
-                plt.imshow(np.transpose(vutils.make_grid(fake, padding=2, normalize=True), (1, 2, 0)))
-                plt.show()
+            # if iter == 0:
+            #     with torch.no_grad():
+            #         fake = generator(parameter.fixed_noise).detach().cpu()
+            #     plt.imshow(np.transpose(vutils.make_grid(fake, padding=2, normalize=True), (1, 2, 0)))
+            #     plt.show()
+            #
+            # iter += 1
 
-            iter += 1
+        ##############################################
+        #               Evaluate model               #
+        ##############################################
+        acc = test_model(generator, eval_model, e)
+        print(f'acc: {acc}')
+        print('-' * 10)
 
 
-def test_model(generator, eval_model):
+def test_model(generator, eval_model, epoch):
     generator.eval()
 
-    test_data = ICLEVRLoader('jsonfile', mode='test')
+    test_data = ICLEVRLoader('jsonfile', trans=transforms.Compose([
+        transforms.Resize((image_size, image_size)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ]), mode='test')
     test_loader = DataLoader(test_data, batch_size=len(test_data))
     acc = 0
 
     for _, label in test_loader:
         label = label.to(device)
-        latent = torch.randn(label.size(0), parameter.latent_size, device=device, dtype=torch.float)
+        latent = torch.randn(label.size(0), parameter.latent_size, 1, 1, device=device, dtype=torch.float)
         generated_img = generator((latent, label))
         acc = eval_model.eval(generated_img, label)
 
-    return acc, generated_img[0].view(3, 64, 64)
+    plt.imshow(np.transpose(vutils.make_grid(generated_img.cpu(), padding=2, normalize=True), (1, 2, 0)))
+    # plt.savefig(f'record/record{epoch}.jpg')
+    plt.show()
+
+    return acc
 
 
 if __name__ == "__main__":
@@ -104,10 +121,12 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ]), mode='train')
-    loader = DataLoader(data, batch_size=parameter.batch_size)
+    loader = DataLoader(data, batch_size=parameter.batch_size, num_workers=parameter.workers)
 
-    g = Generator(parameter.latent_size)
-    d = Discriminator()
+    # g = Generator(parameter.latent_size)
+    # d = Discriminator()
+    g = SAGenerator(parameter.latent_size)
+    d = SADiscriminator(4)
     setup_model(g)
     setup_model(d)
 

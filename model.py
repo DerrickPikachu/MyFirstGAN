@@ -62,11 +62,11 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, in_dim):
         super(Discriminator, self).__init__()
 
         self.l1 = nn.Sequential(
-            nn.Conv2d(3, df_size, 4, 2, 1),
+            nn.Conv2d(in_dim, df_size, 4, 2, 1),
             nn.LeakyReLU(0.2, inplace=True),
         )
         # State: (df_size x 32 x 32)
@@ -107,12 +107,15 @@ class SAGenerator(nn.Module):
     def __init__(self, nz):
         super(SAGenerator, self).__init__()
 
-        self.dc_generator = Generator(nz)
+        self.dc_generator = Generator(nz + 24)
         self.attn1 = Self_Attn(gf_size * 2, 'relu')
         self.attn2 = Self_Attn(gf_size, 'relu')
 
     def forward(self, input):
-        out = self.dc_generator.l1(input)
+        latent_code, label = input
+        # Conditional
+        latent_code = torch.cat([latent_code, label.view(-1, 24, 1, 1)], dim=1)
+        out = self.dc_generator.l1(latent_code)
         out = self.dc_generator.l2(out)
         out = self.dc_generator.l3(out)
         out, _ = self.attn1(out)
@@ -123,15 +126,20 @@ class SAGenerator(nn.Module):
 
 
 class SADiscriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, in_dim):
         super(SADiscriminator, self).__init__()
 
-        self.dc_discriminator = Discriminator()
+        self.label_layer = nn.Linear(in_features=24, out_features=64 * 64)
+        self.dc_discriminator = Discriminator(in_dim)
         self.attn1 = Self_Attn(df_size * 4, 'relu')
         self.attn2 = Self_Attn(df_size * 8, 'relu')
 
     def forward(self, input):
-        out = self.dc_discriminator.l1(input)
+        img, label = input
+        # Conditional
+        label = self.label_layer(label).view(-1, 1, 64, 64)
+        img = torch.cat([img, label], dim=1)
+        out = self.dc_discriminator.l1(img)
         out = self.dc_discriminator.l2(out)
         out = self.dc_discriminator.l3(out)
         out, _ = self.attn1(out)

@@ -5,7 +5,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 latent_size = 64
 lr = 0.0002
-epochs = 10
+epochs = 90
 batch_size = 128
 
 image_size = 64
