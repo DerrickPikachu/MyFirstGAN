@@ -53,7 +53,9 @@ class Generator(nn.Module):
         # State: (3 x 64 x 64)
 
     def forward(self, input):
-        out = self.l1(input)
+        latent, label = input
+        latent = torch.cat([latent, label.view(-1, 24, 1, 1)], dim=1)
+        out = self.l1(latent)
         out = self.l2(out)
         out = self.l3(out)
         out = self.l4(out)
@@ -64,6 +66,8 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, in_dim):
         super(Discriminator, self).__init__()
+
+        self.label_layer = nn.Linear(in_features=24, out_features=64 * 64)
 
         self.l1 = nn.Sequential(
             nn.Conv2d(in_dim, df_size, 4, 2, 1),
@@ -95,7 +99,10 @@ class Discriminator(nn.Module):
         # State: (1 x 1 x 1)
 
     def forward(self, input):
-        out = self.l1(input)
+        img, label = input
+        label = self.label_layer(label).view(-1, 1, 64, 64)
+        img = torch.cat([img, label], dim=1)
+        out = self.l1(img)
         out = self.l2(out)
         out = self.l3(out)
         out = self.l4(out)

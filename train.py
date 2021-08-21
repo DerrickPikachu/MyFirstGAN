@@ -86,7 +86,8 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
         ##############################################
         #               Evaluate model               #
         ##############################################
-        acc = test_model(generator, eval_model, e)
+        with torch.no_grad():
+            acc = test_model(generator, eval_model, e)
         print(f'acc: {acc}')
         print('-' * 10)
 
@@ -125,8 +126,8 @@ if __name__ == "__main__":
 
     # g = Generator(parameter.latent_size)
     # d = Discriminator()
-    g = SAGenerator(parameter.latent_size)
-    d = SADiscriminator(4)
+    g = Generator(parameter.latent_size + 24)
+    d = Discriminator(4)
     setup_model(g)
     setup_model(d)
 
