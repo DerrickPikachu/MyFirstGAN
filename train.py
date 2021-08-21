@@ -22,9 +22,9 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
         print(f'Epoch {e}/{parameter.epochs}:')
         iter = 0
 
-        if e == 30:
-            g_optimizer = torch.optim.Adam(generator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
-            d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
+        # if e == 30:
+        #     g_optimizer = torch.optim.Adam(generator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
+        #     d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
 
         for img, label in tqdm(dataloader):
             img = img.to(device)

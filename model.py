@@ -23,31 +23,31 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         self.l1 = nn.Sequential(
-            nn.ConvTranspose2d(nz, gf_size * 8, 4),
+            nn.ConvTranspose2d(nz, gf_size * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(gf_size * 8),
             nn.ReLU(True),
         )
         # State: (gf_size * 8 x 4 x 4)
         self.l2 = nn.Sequential(
-            nn.ConvTranspose2d(gf_size * 8, gf_size * 4, 4, 2, 1),
+            nn.ConvTranspose2d(gf_size * 8, gf_size * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(gf_size * 4),
             nn.ReLU(True),
         )
         # State: (gf_size * 4 x 8 x 8)
         self.l3 = nn.Sequential(
-            nn.ConvTranspose2d(gf_size * 4, gf_size * 2, 4, 2, 1),
+            nn.ConvTranspose2d(gf_size * 4, gf_size * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(gf_size * 2),
             nn.ReLU(True),
         )
         # State: (gf_size * 2 x 16 x 16)
         self.l4 = nn.Sequential(
-            nn.ConvTranspose2d(gf_size * 2, gf_size, 4, 2, 1),
+            nn.ConvTranspose2d(gf_size * 2, gf_size, 4, 2, 1, bias=False),
             nn.BatchNorm2d(gf_size),
             nn.ReLU(True),
         )
         # State: (gf_size x 32 x 32)
         self.last = nn.Sequential(
-            nn.ConvTranspose2d(gf_size, 3, 4, 2, 1),
+            nn.ConvTranspose2d(gf_size, 3, 4, 2, 1, bias=False),
             nn.Tanh()
         )
         # State: (3 x 64 x 64)
@@ -70,30 +70,30 @@ class Discriminator(nn.Module):
         self.label_layer = nn.Linear(in_features=24, out_features=64 * 64)
 
         self.l1 = nn.Sequential(
-            nn.Conv2d(in_dim, df_size, 4, 2, 1),
+            nn.Conv2d(in_dim, df_size, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
         )
         # State: (df_size x 32 x 32)
         self.l2 = nn.Sequential(
-            nn.Conv2d(df_size, df_size * 2, 4, 2, 1),
+            nn.Conv2d(df_size, df_size * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(df_size * 2),
             nn.LeakyReLU(0.2, inplace=True),
         )
         # State: (df_size * 2 x 16 x 16)
         self.l3 = nn.Sequential(
-            nn.Conv2d(df_size * 2, df_size * 4, 4, 2, 1),
+            nn.Conv2d(df_size * 2, df_size * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(df_size * 4),
             nn.LeakyReLU(0.2, inplace=True),
         )
         # State: (df_size * 4 x 8 x 8)
         self.l4 = nn.Sequential(
-            nn.Conv2d(df_size * 4, df_size * 8, 4, 2, 1),
+            nn.Conv2d(df_size * 4, df_size * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(df_size * 8),
             nn.LeakyReLU(0.2, inplace=True),
         )
         # State: (df_size * 8 x 4 x 4)
         self.last = nn.Sequential(
-            nn.Conv2d(df_size * 8, 1, 4),
+            nn.Conv2d(df_size * 8, 1, 4, 1, 0, bias=False),
             nn.Sigmoid(),
         )
         # State: (1 x 1 x 1)
