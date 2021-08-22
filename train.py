@@ -7,106 +7,12 @@ from tqdm import tqdm
 
 from dataset import ICLEVRLoader
 import parameter
-from parameter import device, loss_f, image_size
+from parameter import *
 from model import *
 from evaluator import evaluation_model
 import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
-
-
-def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
-    eval_model = evaluation_model()
-    best_acc = 0
-    best_weight = None
-
-    for e in range(1, parameter.epochs + 1):
-        generator.train()
-        discriminator.train()
-        print(f'Epoch {e}/{parameter.epochs}:')
-        iter = 0
-
-        # if e == 30:
-        #     g_optimizer = torch.optim.Adam(generator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
-        #     d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=parameter.lr / 2, betas=(parameter.beta1, 0.999))
-
-        for img, label in tqdm(dataloader):
-            img = img.to(device)
-            label = label.to(device)
-            b_size = img.size(0)
-
-            ##############################################
-            #                Discriminator               #
-            #                    Update                  #
-            ##############################################
-            # Setup discriminator
-            discriminator.zero_grad()
-
-            # Train with real image data
-            # Setup target
-            real_target = torch.full((b_size,), 1, dtype=torch.float, device=device)
-            # discriminator predict and calculate loss
-            output = discriminator((img, label)).view(-1)
-            real_loss = loss_f(output, real_target)
-            # Calculate gradient
-            real_loss.backward()
-
-            # Train with fake image data
-            # Generate fake img
-            noise = torch.randn(b_size, parameter.latent_size, 1, 1, device=device)
-            fake_img = generator((noise, label))
-            fake_target = torch.full((b_size,), 0, dtype=torch.float, device=device)
-            # Calculate fake img loss
-            output = discriminator((fake_img.detach(), label)).view(-1)
-            fake_loss = loss_f(output, fake_target)
-            # Calculate gradient
-            fake_loss.backward()
-
-            # Update
-            d_optimizer.step()
-
-            ##############################################
-            #                  Generator                 #
-            #                   Update                   #
-            ##############################################
-            # Setup generator and target
-            generator.zero_grad()
-            g_target = torch.full((b_size,), 1, dtype=torch.float, device=device)
-            # Recalculate loss with updated discriminator
-            output = discriminator((fake_img, label)).view(-1)
-            g_loss = loss_f(output, g_target)
-            # Update generator
-            g_loss.backward()
-            g_optimizer.step()
-
-            # if iter == 0:
-            #     with torch.no_grad():
-            #         fake = generator(parameter.fixed_noise).detach().cpu()
-            #     plt.imshow(np.transpose(vutils.make_grid(fake, padding=2, normalize=True), (1, 2, 0)))
-            #     plt.show()
-            #
-            # iter += 1
-
-        ##############################################
-        #               Evaluate model               #
-        ##############################################
-        with torch.no_grad():
-            acc, gen_img = test_model(generator, eval_model, e)
-        print(f'acc: {acc}')
-        print('-' * 10)
-
-        # if e % 15 == 0:
-        plt.imshow(np.transpose(vutils.make_grid(gen_img, padding=2, normalize=True), (1, 2, 0)))
-        plt.show()
-
-        if acc > best_acc:
-            best_acc = acc
-            best_weight = copy.deepcopy(generator.state_dict())
-
-    print(f'best acc: {acc}')
-    generator.load_state_dict(best_weight)
-    torch.save(generator, 'SAGAN.pth')
-    print('save model')
 
 
 def test_model(generator, eval_model, epoch):
@@ -122,7 +28,7 @@ def test_model(generator, eval_model, epoch):
 
     for _, label in test_loader:
         label = label.to(device)
-        latent = torch.randn(label.size(0), parameter.latent_size, 1, 1, device=device, dtype=torch.float)
+        latent = torch.randn(label.size(0), nz, 1, 1, device=device, dtype=torch.float)
         generated_img = generator((latent, label))
         acc = eval_model.eval(generated_img, label)
 
@@ -130,7 +36,7 @@ def test_model(generator, eval_model, epoch):
     # plt.savefig(f'record/record{epoch}.jpg')
     # plt.show()
 
-    return acc, generated_img.cpu()
+    return acc, generated_img.detach().cpu()
 
 
 if __name__ == "__main__":
@@ -139,22 +45,110 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ]), mode='train')
-    loader = DataLoader(data, batch_size=parameter.batch_size, num_workers=parameter.workers)
+    loader = DataLoader(data, batch_size=batch_size, num_workers=workers)
 
-    # g = Generator(parameter.latent_size)
-    # d = Discriminator()
-    g = Generator(parameter.latent_size + 24)
-    d = Discriminator(3)
-    setup_model(g)
-    setup_model(d)
+    # Build network
+    eval_model = evaluation_model()
+    netG = Generator(ngpu).to(device)
+    netD = Discriminator(ngpu).to(device)
+    setup(netG)
+    setup(netD)
 
-    g_opti = torch.optim.Adam(g.parameters(), lr=parameter.lr, betas=(parameter.beta1, 0.999))
-    d_opti = torch.optim.Adam(d.parameters(), lr=parameter.lr, betas=(parameter.beta1, 0.999))
+    # Initialize BCELoss function
+    criterion = nn.BCELoss()
 
-    train_model(g, d, g_opti, d_opti, loader)
+    # Create batch of latent vectors that we will use to visualize
+    #  the progression of the generator
+    fixed_noise = torch.randn(64, nz, 1, 1, device=device)
 
-    # eval_model = evaluation_model()
-    # test_model(g, eval_model)
+    # Establish convention for real and fake labels during training
+    real_label = 1.
+    fake_label = 0.
 
+    # Setup Adam optimizers for both G and D
+    optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
+    # Lists to keep track of progress
+    img_list = []
+    G_losses = []
+    D_losses = []
+    iters = 0
+
+    print("Starting Training Loop...")
+    # For each epoch
+    for epoch in range(num_epochs):
+        # For each batch in the dataloader
+        for i, data in enumerate(loader, 0):
+
+            ############################
+            # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+            ###########################
+            ## Train with all-real batch
+            netD.zero_grad()
+            # Format batch
+            real_cpu = data[0].to(device)
+            c_label = data[1].to(device)
+            b_size = real_cpu.size(0)
+            label = torch.full((b_size,), real_label, dtype=torch.float, device=device)
+            # Forward pass real batch through D
+            output = netD((real_cpu, c_label)).view(-1)
+            # Calculate loss on all-real batch
+            errD_real = criterion(output, label)
+            # Calculate gradients for D in backward pass
+            errD_real.backward()
+            D_x = output.mean().item()
+
+            ## Train with all-fake batch
+            # Generate batch of latent vectors
+            noise = torch.randn(b_size, nz, 1, 1, device=device)
+            # Generate fake image batch with G
+            fake = netG((noise, c_label))
+            label.fill_(fake_label)
+            # Classify all fake batch with D
+            output = netD((fake.detach(), c_label)).view(-1)
+            # Calculate D's loss on the all-fake batch
+            errD_fake = criterion(output, label)
+            # Calculate the gradients for this batch, accumulated (summed) with previous gradients
+            errD_fake.backward()
+            D_G_z1 = output.mean().item()
+            # Compute error of D as sum over the fake and the real batches
+            errD = errD_real + errD_fake
+            # Update D
+            optimizerD.step()
+
+            ############################
+            # (2) Update G network: maximize log(D(G(z)))
+            ###########################
+            netG.zero_grad()
+            label.fill_(real_label)  # fake labels are real for generator cost
+            # Since we just updated D, perform another forward pass of all-fake batch through D
+            output = netD((fake, c_label)).view(-1)
+            # Calculate G's loss based on this output
+            errG = criterion(output, label)
+            # Calculate gradients for G
+            errG.backward()
+            D_G_z2 = output.mean().item()
+            # Update G
+            optimizerG.step()
+
+            # Output training stats
+            if i % 50 == 0:
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                      % (epoch, num_epochs, i, len(loader),
+                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+
+            # Save Losses for plotting later
+            G_losses.append(errG.item())
+            D_losses.append(errD.item())
+
+            # Check how the generator is doing by saving G's output on fixed_noise
+            if (iters % 50 == 0) or ((epoch == num_epochs - 1) and (i == len(loader) - 1)):
+                with torch.no_grad():
+                    # fake = netG(fixed_noise).detach().cpu()
+                    acc, gen_img = test_model(netG, eval_model, epoch)
+                plt.imshow(np.transpose(vutils.make_grid(gen_img, padding=2, normalize=True), (1, 2, 0)))
+                plt.show()
+
+            iters += 1
 
