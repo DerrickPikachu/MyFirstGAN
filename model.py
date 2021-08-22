@@ -85,9 +85,22 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*8) x 4 x 4
+            # nn.Flatten(),
             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
             nn.Sigmoid()
         )
+
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(in_features=ndf * 8 * 4 * 4, out_features=1024),
+        #     nn.LeakyReLU(),
+        #     nn.Linear(in_features=1024, out_features=512),
+        #     nn.LeakyReLU(),
+        #     nn.Linear(in_features=512, out_features=128),
+        #     nn.LeakyReLU(),
+        #     nn.Linear(in_features=128, out_features=1),
+        #     nn.Sigmoid()
+        # )
+
         # self.main = nn.Sequential(
         #     # input is (nc) x 64 x 64
         #     nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
@@ -115,6 +128,7 @@ class Discriminator(nn.Module):
         x = self.first_conv(img)
         x = torch.cat((x, label.view(-1, ndf * 2, 16, 16)), dim=1)
         out = self.second_conv(x)
+        # out = self.classifier(out)
         return out
 
 
