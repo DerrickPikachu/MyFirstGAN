@@ -60,7 +60,8 @@ if __name__ == "__main__":
 
     # Build network
     eval_model = evaluation_model()
-    netG = Generator(ngpu).to(device)
+    # netG = Generator(ngpu).to(device)
+    netG = SAGenerator(ngpu).to(device)
     netD = Discriminator(ngpu).to(device)
     setup(netG)
     setup(netD)
@@ -78,12 +79,13 @@ if __name__ == "__main__":
 
     # Setup Adam optimizers for both G and D
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
-    optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerG = optim.Adam(netG.parameters(), lr=lr * 5, betas=(beta1, 0.999))
 
     # Lists to keep track of progress
     img_list = []
     G_losses = []
     D_losses = []
+    acc_list = []
     iters = 0
 
     best_acc = 0
@@ -93,6 +95,8 @@ if __name__ == "__main__":
     # For each epoch
     for epoch in range(num_epochs):
         # For each batch in the dataloader
+        accumulate_acc = 0
+        cal_acc_counter = 0
         for i, data in enumerate(loader, 0):
 
             ############################
@@ -130,20 +134,22 @@ if __name__ == "__main__":
             output = netD((real_cpu, rand_fake_c(b_size))).view(-1)
             errD_fake_c = criterion(output, label)
             errD_fake_c.backward()
-            # Update D
-            optimizerD.step()
             # Compute error of D as sum over the fake and the real batches
             errD = errD_real + errD_fake + errD_fake_c
+            # Update D
+            optimizerD.step()
 
             ############################
             # (2) Update G network: maximize log(D(G(z)))
             ###########################
             D_G_z2 = 0
-            for i in range(3):
+            for _ in range(1):
                 netG.zero_grad()
                 label.fill_(real_label)  # fake labels are real for generator cost
-                noise = torch.randn(b_size, nz, 1, 1, device=device)
-                fake = netG((noise, c_label))
+
+                # noise = torch.randn(b_size, nz, 1, 1, device=device)
+                # fake = netG((noise, c_label))
+
                 # Since we just updated D, perform another forward pass of all-fake batch through D
                 output = netD((fake, c_label)).view(-1)
                 # Calculate G's loss based on this output
@@ -166,7 +172,7 @@ if __name__ == "__main__":
             D_losses.append(errD.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 50 == 0) or ((epoch == num_epochs - 1) and (i == len(loader) - 1)):
+            if (iters % 100 == 0) or ((epoch == num_epochs - 1) and (i == len(loader) - 1)):
                 with torch.no_grad():
                     # fake = netG(fixed_noise).detach().cpu()
                     acc, gen_img = test_model(netG, eval_model, epoch)
@@ -175,13 +181,22 @@ if __name__ == "__main__":
                 plt.savefig(f'record/record{iters}')
                 print(f'acc: {acc}')
 
+                accumulate_acc += acc
+                cal_acc_counter += 1
+
             if acc > best_acc:
                 best_acc = acc
                 best_weight = copy.deepcopy(netG.state_dict())
 
             iters += 1
 
+        acc_list.append(accumulate_acc / cal_acc_counter)
+
     print(f'best acc: {best_acc}')
-    netG.load_state_dict(best_weight)
-    torch.save(netG, 'generator.pth')
+    # netG.load_state_dict(best_weight)
+    # torch.save(netG, 'generator3.pth')
+
+    plt.figure()
+    plt.plot(acc_list)
+    plt.show()
 
