@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -15,6 +17,8 @@ import torchvision.utils as vutils
 
 def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
     eval_model = evaluation_model()
+    best_acc = 0
+    best_weight = None
 
     for e in range(1, parameter.epochs + 1):
         generator.train()
@@ -87,9 +91,22 @@ def train_model(generator, discriminator, g_optimizer, d_optimizer, dataloader):
         #               Evaluate model               #
         ##############################################
         with torch.no_grad():
-            acc = test_model(generator, eval_model, e)
+            acc, gen_img = test_model(generator, eval_model, e)
         print(f'acc: {acc}')
         print('-' * 10)
+
+        # if e % 15 == 0:
+        plt.imshow(np.transpose(vutils.make_grid(gen_img, padding=2, normalize=True), (1, 2, 0)))
+        plt.show()
+
+        if acc > best_acc:
+            best_acc = acc
+            best_weight = copy.deepcopy(generator.state_dict())
+
+    print(f'best acc: {acc}')
+    generator.load_state_dict(best_weight)
+    torch.save(generator, 'SAGAN.pth')
+    print('save model')
 
 
 def test_model(generator, eval_model, epoch):
@@ -109,11 +126,11 @@ def test_model(generator, eval_model, epoch):
         generated_img = generator((latent, label))
         acc = eval_model.eval(generated_img, label)
 
-    plt.imshow(np.transpose(vutils.make_grid(generated_img.cpu(), padding=2, normalize=True), (1, 2, 0)))
+    # plt.imshow(np.transpose(vutils.make_grid(generated_img.cpu(), padding=2, normalize=True), (1, 2, 0)))
     # plt.savefig(f'record/record{epoch}.jpg')
-    plt.show()
+    # plt.show()
 
-    return acc
+    return acc, generated_img.cpu()
 
 
 if __name__ == "__main__":
@@ -126,8 +143,8 @@ if __name__ == "__main__":
 
     # g = Generator(parameter.latent_size)
     # d = Discriminator()
-    g = Generator(parameter.latent_size + 24)
-    d = Discriminator(4)
+    g = SAGenerator(parameter.latent_size + 24)
+    d = Discriminator(3)
     setup_model(g)
     setup_model(d)
 

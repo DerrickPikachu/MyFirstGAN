@@ -67,7 +67,12 @@ class Discriminator(nn.Module):
     def __init__(self, in_dim):
         super(Discriminator, self).__init__()
 
-        self.label_layer = nn.Linear(in_features=24, out_features=64 * 64)
+        self.label_layer = nn.Sequential(
+            nn.Linear(in_features=24, out_features=df_size),
+            nn.ReLU(),
+            nn.Linear(in_features=df_size, out_features=32)
+        )
+        # self.label_layer = nn.Linear(24, 64 * 64)
 
         self.l1 = nn.Sequential(
             nn.Conv2d(in_dim, df_size, 4, 2, 1, bias=False),
@@ -92,20 +97,29 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
         )
         # State: (df_size * 8 x 4 x 4)
-        self.last = nn.Sequential(
-            nn.Conv2d(df_size * 8, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid(),
-        )
+        # self.last = nn.Sequential(
+        #     nn.Conv2d(df_size * 8, 1, 4, 1, 0, bias=False),
+        #     nn.Sigmoid(),
+        # )
         # State: (1 x 1 x 1)
+        self.last = nn.Sequential(
+            nn.Linear(in_features=df_size * 8 * 4 * 4 + 32, out_features=128),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=1),
+            nn.Sigmoid()
+        )
 
     def forward(self, input):
         img, label = input
-        label = self.label_layer(label).view(-1, 1, 64, 64)
-        img = torch.cat([img, label], dim=1)
+        # label = self.label_layer(label).view(-1, 1, 64, 64)
+        # img = torch.cat([img, label], dim=1)
+        label = self.label_layer(label)
         out = self.l1(img)
         out = self.l2(out)
         out = self.l3(out)
         out = self.l4(out)
+        out = nn.Flatten()(out)
+        out = torch.cat([out, label], dim=1)
         out = self.last(out)
         return out
 
@@ -114,7 +128,7 @@ class SAGenerator(nn.Module):
     def __init__(self, nz):
         super(SAGenerator, self).__init__()
 
-        self.dc_generator = Generator(nz + 24)
+        self.dc_generator = Generator(nz)
         self.attn1 = Self_Attn(gf_size * 2, 'relu')
         self.attn2 = Self_Attn(gf_size, 'relu')
 
@@ -164,9 +178,9 @@ class Self_Attn(nn.Module):
         self.chanel_in = in_dim
         self.activation = activation
 
-        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim // 8, kernel_size=1)
-        self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim // 8, kernel_size=1)
-        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1)
+        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim // 8, kernel_size=1, bias=False)
+        self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim // 8, kernel_size=1, bias=False)
+        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1, bias=False)
         self.gamma = nn.Parameter(torch.zeros(1))
 
         self.softmax = nn.Softmax(dim=-1)  #
