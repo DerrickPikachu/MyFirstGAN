@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
     # g = Generator(parameter.latent_size)
     # d = Discriminator()
-    g = SAGenerator(parameter.latent_size + 24)
+    g = Generator(parameter.latent_size + 24)
     d = Discriminator(3)
     setup_model(g)
     setup_model(d)

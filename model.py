@@ -68,9 +68,7 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
 
         self.label_layer = nn.Sequential(
-            nn.Linear(in_features=24, out_features=df_size),
-            nn.ReLU(),
-            nn.Linear(in_features=df_size, out_features=32)
+            nn.Linear(in_features=24, out_features=64)
         )
         # self.label_layer = nn.Linear(24, 64 * 64)
 
@@ -103,7 +101,11 @@ class Discriminator(nn.Module):
         # )
         # State: (1 x 1 x 1)
         self.last = nn.Sequential(
-            nn.Linear(in_features=df_size * 8 * 4 * 4 + 32, out_features=128),
+            nn.Linear(in_features=df_size * 4 * 8 * 8 + 24, out_features=128),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=128),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=128),
             nn.ReLU(),
             nn.Linear(in_features=128, out_features=1),
             nn.Sigmoid()
@@ -113,13 +115,13 @@ class Discriminator(nn.Module):
         img, label = input
         # label = self.label_layer(label).view(-1, 1, 64, 64)
         # img = torch.cat([img, label], dim=1)
-        label = self.label_layer(label)
+        # label = self.label_layer(label)
         out = self.l1(img)
         out = self.l2(out)
         out = self.l3(out)
-        out = self.l4(out)
+        # out = self.l4(out)
         out = nn.Flatten()(out)
-        out = torch.cat([out, label], dim=1)
+        out = torch.cat([out, label.view(-1, 24)], dim=1)
         out = self.last(out)
         return out
 
