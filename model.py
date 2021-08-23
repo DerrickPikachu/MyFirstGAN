@@ -60,9 +60,11 @@ class Discriminator(nn.Module):
     def __init__(self, ngpu):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
+        self.l_y = nn.Linear(24, 64 * 64)
         self.conv = nn.Sequential(
             # Size C x 64 x 64
-            nn.Conv2d(3, ndf // 2, 4, 2, 1),
+            # nn.Conv2d(3, ndf // 2, 4, 2, 1),
+            nn.Conv2d(4, ndf // 2, 4, 2, 1),
             nn.BatchNorm2d(ndf // 2),
             # Size C x 32 x 32
             nn.Conv2d(ndf // 2, ndf, 8, 2, 1),
@@ -77,7 +79,8 @@ class Discriminator(nn.Module):
             # Size 1024
         )
         self.linear = nn.Sequential(
-            nn.Linear(1048, 512),
+            # nn.Linear(1048, 512),
+            nn.Linear(1024, 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 512),
             nn.Dropout(0.4),
@@ -91,8 +94,10 @@ class Discriminator(nn.Module):
 
     def forward(self, input):
         img, condition = input
+        condition = self.l_y(condition)
+        img = torch.cat((img, condition), 1)
         out = self.conv(img)
-        out = torch.cat((out, condition), 1)
+        # out = torch.cat((out, condition), 1)
         out = self.linear(out)
         return out
 
