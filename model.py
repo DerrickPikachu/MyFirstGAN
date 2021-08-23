@@ -105,65 +105,65 @@ class Discriminator(nn.Module):
         return out
 
 
-# class Discriminator(nn.Module):
-#     def __init__(self, ngpu):
-#         super(Discriminator, self).__init__()
-#         self.ngpu = ngpu
-#
-#         self.l_y = nn.Sequential(
-#             nn.Linear(24, ndf * 2 * 16 * 16)
-#         )
-#
-#         self.first_conv = nn.Sequential(
-#             # input is (nc) x 64 x 64
-#             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
-#             nn.LeakyReLU(0.2, inplace=True),
-#             # state size. (ndf) x 32 x 32
-#             nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-#             nn.BatchNorm2d(ndf * 2),
-#             nn.LeakyReLU(0.2, inplace=True),
-#         )
-#
-#         self.second_conv = nn.Sequential(
-#             # state size. (ndf*2) x 16 x 16
-#             nn.Conv2d(ndf * 2 * 2, ndf * 4, 4, 2, 1, bias=False),
-#             nn.BatchNorm2d(ndf * 4),
-#             nn.LeakyReLU(0.2, inplace=True),
-#             nn.Dropout2d(0.5),
-#             # state size. (ndf*4) x 8 x 8
-#             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-#             nn.BatchNorm2d(ndf * 8),
-#             nn.LeakyReLU(0.2, inplace=True),
-#             nn.Dropout2d(0.5),
-#             # state size. (ndf*8) x 4 x 4
-#             # nn.Flatten(),
-#             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-#             nn.Dropout2d(0.5),
-#             nn.Sigmoid()
-#         )
-#
-#         # self.classifier = nn.Sequential(
-#         #     nn.Linear(in_features=ndf * 8 * 4 * 4, out_features=256),
-#         #     nn.LeakyReLU(),
-#         #     nn.Dropout(0.4),
-#         #     nn.Linear(in_features=256, out_features=128),
-#         #     nn.LeakyReLU(),
-#         #     nn.Dropout(0.4),
-#         #     nn.Linear(in_features=128, out_features=64),
-#         #     nn.LeakyReLU(),
-#         #     nn.Dropout(0.4),
-#         #     nn.Linear(in_features=64, out_features=1),
-#         #     nn.Sigmoid()
-#         # )
-#
-#     def forward(self, input):
-#         img, label = input
-#         label = self.l_y(label)
-#         x = self.first_conv(img)
-#         x = torch.cat((x, label.view(-1, ndf * 2, 16, 16)), dim=1)
-#         out = self.second_conv(x)
-#         # out = self.classifier(out)
-#         return out
+class Discriminator2(nn.Module):
+    def __init__(self, ngpu):
+        super(Discriminator2, self).__init__()
+        self.ngpu = ngpu
+
+        self.l_y = nn.Sequential(
+            nn.Linear(24, ndf * 2 * 16 * 16)
+        )
+
+        self.first_conv = nn.Sequential(
+            # input is (nc) x 64 x 64
+            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf) x 32 x 32
+            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+        )
+
+        self.second_conv = nn.Sequential(
+            # state size. (ndf*2) x 16 x 16
+            nn.Conv2d(ndf * 2 * 2, ndf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # nn.Dropout2d(0.5),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout2d(0.4),
+            # state size. (ndf*8) x 4 x 4
+            # nn.Flatten(),
+            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Dropout2d(0.4),
+            nn.Sigmoid()
+        )
+
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(in_features=ndf * 8 * 4 * 4, out_features=256),
+        #     nn.LeakyReLU(),
+        #     nn.Dropout(0.4),
+        #     nn.Linear(in_features=256, out_features=128),
+        #     nn.LeakyReLU(),
+        #     nn.Dropout(0.4),
+        #     nn.Linear(in_features=128, out_features=64),
+        #     nn.LeakyReLU(),
+        #     nn.Dropout(0.4),
+        #     nn.Linear(in_features=64, out_features=1),
+        #     nn.Sigmoid()
+        # )
+
+    def forward(self, input):
+        img, label = input
+        label = self.l_y(label)
+        x = self.first_conv(img)
+        x = torch.cat((x, label.view(-1, ndf * 2, 16, 16)), dim=1)
+        out = self.second_conv(x)
+        # out = self.classifier(out)
+        return out
 
 
 class SAGenerator(nn.Module):
@@ -193,7 +193,7 @@ class SAGenerator(nn.Module):
         )
         self.attn2 = Self_Attn(ngf, 'relu')
         self.conv3 = nn.Sequential(
-            # state size. (ngf) x 32 x 32
+            # state size. (ngf) x 32 x 32S
             nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
             nn.Tanh()
             # state size. (nc) x 64 x 64
@@ -250,7 +250,7 @@ class Self_Attn(nn.Module):
         self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1, bias=False)
         self.gamma = nn.Parameter(torch.zeros(1))
 
-        self.softmax = nn.Softmax(dim=-1)  #
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """

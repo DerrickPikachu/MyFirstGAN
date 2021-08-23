@@ -14,30 +14,7 @@ from evaluator import evaluation_model
 import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
-
-
-def test_model(generator, eval_model, epoch):
-    generator.eval()
-
-    test_data = ICLEVRLoader('jsonfile', trans=transforms.Compose([
-        transforms.Resize((image_size, image_size)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ]), mode='test')
-    test_loader = DataLoader(test_data, batch_size=len(test_data))
-    acc = 0
-
-    for _, label in test_loader:
-        label = label.to(device)
-        latent = torch.randn(label.size(0), nz, 1, 1, device=device, dtype=torch.float)
-        generated_img = generator((latent, label))
-        acc = eval_model.eval(generated_img, label)
-
-    # plt.imshow(np.transpose(vutils.make_grid(generated_img.cpu(), padding=2, normalize=True), (1, 2, 0)))
-    # plt.savefig(f'record/record{epoch}.jpg')
-    # plt.show()
-
-    return acc, generated_img.detach().cpu()
+from evaluator import test_model
 
 
 def rand_fake_c(b_size):
@@ -62,7 +39,7 @@ if __name__ == "__main__":
     eval_model = evaluation_model()
     # netG = Generator(ngpu).to(device)
     netG = SAGenerator(ngpu).to(device)
-    netD = Discriminator(ngpu).to(device)
+    netD = Discriminator2(ngpu).to(device)
     setup(netG)
     setup(netD)
 
@@ -176,7 +153,7 @@ if __name__ == "__main__":
                 with torch.no_grad():
                     # fake = netG(fixed_noise).detach().cpu()
                     acc, gen_img = test_model(netG, eval_model, epoch)
-                plt.imshow(np.transpose(vutils.make_grid(gen_img, padding=2, normalize=True), (1, 2, 0)))
+                # plt.imshow(np.transpose(vutils.make_grid(gen_img, padding=2, normalize=True), (1, 2, 0)))
                 # plt.show()
                 # plt.savefig(f'record/record{iters}')
                 print(f'acc: {acc}')
@@ -193,13 +170,14 @@ if __name__ == "__main__":
         acc_list.append(accumulate_acc / cal_acc_counter)
 
     print(f'best acc: {best_acc}')
-    netG.load_state_dict(best_weight)
-    torch.save(netG, 'generator3.pth')
+    # netG.load_state_dict(best_weight)
+    # torch.save(netG, 'generator3.pth')
 
     # plt.figure()
     plt.title('SAGAN testing accuracy')
     plt.xlabel('epochs')
     plt.ylabel('accuracy')
     plt.plot(acc_list)
-    plt.show()
+    # plt.show()
+    plt.savefig('record/curve.jpg')
 
