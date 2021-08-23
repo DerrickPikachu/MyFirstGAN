@@ -9,6 +9,7 @@ from parameter import *
 from dataset import ICLEVRLoader
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
+import sys
 
 '''===============================================================
 1. Title:     
@@ -75,14 +76,14 @@ class evaluation_model:
             return acc
 
 
-def test_model(generator, eval_model, epoch):
+def test_model(generator, eval_model, test_target):
     generator.eval()
 
     test_data = ICLEVRLoader('jsonfile', trans=transforms.Compose([
         transforms.Resize((image_size, image_size)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ]), mode='test')
+    ]), mode=test_target)
     test_loader = DataLoader(test_data, batch_size=len(test_data))
     acc = 0
 
@@ -100,13 +101,13 @@ def test_model(generator, eval_model, epoch):
 
 
 if __name__ == "__main__":
-    torch.nn.Module.dump_patches = True
+    argument = str(sys.argv[1])
     gen = torch.load('generator81.pth')
     eval_model = evaluation_model()
     best_acc = 0
     best_result = None
     for _ in range(1000):
-        acc, gen_img = test_model(gen, eval_model, 0)
+        acc, gen_img = test_model(gen, eval_model, argument)
         if acc > best_acc:
             best_acc = acc
             best_result = gen_img

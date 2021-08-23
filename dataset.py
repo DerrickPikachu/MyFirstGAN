@@ -29,7 +29,7 @@ def get_iCLEVR_data(root_folder, mode):
             label[i] = tmp
         return np.squeeze(img), np.squeeze(label)
     else:
-        img_data = json.load(open(os.path.join(root_folder, 'test.json')))
+        img_data = json.load(open(os.path.join(root_folder, f'{mode}.json')))
         obj = json.load(open(os.path.join(root_folder, 'objects.json')))
         label = img_data
         for i in range(len(label)):
