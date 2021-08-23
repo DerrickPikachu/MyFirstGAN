@@ -95,7 +95,7 @@ class Discriminator(nn.Module):
     def forward(self, input):
         img, condition = input
         condition = self.l_y(condition)
-        img = torch.cat((img, condition), 1)
+        img = torch.cat((img, condition.view(-1, 1, 64, 64)), 1)
         out = self.conv(img)
         # out = torch.cat((out, condition), 1)
         out = self.linear(out)
