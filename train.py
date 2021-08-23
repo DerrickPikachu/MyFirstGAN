@@ -172,13 +172,13 @@ if __name__ == "__main__":
             D_losses.append(errD.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 100 == 0) or ((epoch == num_epochs - 1) and (i == len(loader) - 1)):
+            if (iters % 50 == 0) or ((epoch == num_epochs - 1) and (i == len(loader) - 1)):
                 with torch.no_grad():
                     # fake = netG(fixed_noise).detach().cpu()
                     acc, gen_img = test_model(netG, eval_model, epoch)
                 plt.imshow(np.transpose(vutils.make_grid(gen_img, padding=2, normalize=True), (1, 2, 0)))
                 # plt.show()
-                plt.savefig(f'record/record{iters}')
+                # plt.savefig(f'record/record{iters}')
                 print(f'acc: {acc}')
 
                 accumulate_acc += acc
@@ -193,10 +193,13 @@ if __name__ == "__main__":
         acc_list.append(accumulate_acc / cal_acc_counter)
 
     print(f'best acc: {best_acc}')
-    # netG.load_state_dict(best_weight)
-    # torch.save(netG, 'generator3.pth')
+    netG.load_state_dict(best_weight)
+    torch.save(netG, 'generator3.pth')
 
-    plt.figure()
+    # plt.figure()
+    plt.title('SAGAN testing accuracy')
+    plt.xlabel('epochs')
+    plt.ylabel('accuracy')
     plt.plot(acc_list)
     plt.show()
 

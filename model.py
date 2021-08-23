@@ -56,111 +56,114 @@ class Generator(nn.Module):
         return self.main(latent)
 
 
-# class Discriminator(nn.Module):
-#     def __init__(self, ngpu):
-#         super(Discriminator, self).__init__()
-#         self.ngpu = ngpu
-#         self.conv = nn.Sequential(
-#             #             torch.Size([32, 3, 64, 64])
-#
-#             nn.Conv2d(3, 32, 4, 2, 1),
-#             nn.BatchNorm2d(32),
-#             #             torch.Size([32, 32, 32, 32])
-#
-#             nn.Conv2d(32, 64, 8, 2, 1),
-#             nn.BatchNorm2d(64),
-#             nn.LeakyReLU(),
-#             #             torch.Size([32, 64, 14, 14])
-#
-#             nn.Conv2d(64, 64, 10, 2, 1),
-#             nn.BatchNorm2d(64),
-#             nn.LeakyReLU(),
-#             #             torch.Size([32, 64, 4, 4])
-#
-#             nn.Flatten()
-#             #             torch.Size([32, 1024])
-#         )
-#         self.lin = nn.Sequential(
-#             nn.Linear(1048, 512),
-#             nn.LeakyReLU(0.2, inplace=True),
-#             nn.Linear(512, 512),
-#             nn.Dropout(0.4),
-#             nn.LeakyReLU(0.2, inplace=True),
-#             nn.Linear(512, 512),
-#             nn.Dropout(0.4),
-#             nn.LeakyReLU(0.2, inplace=True),
-#             nn.Linear(512, 1),
-#         )
-#         self.sig = nn.Sigmoid()
-#
-#     def forward(self, input):
-#         img, dlabel = input
-#         out = self.conv(img)
-#         # print(dlabel.shape)
-#         # print(out.shape)
-#         out = torch.cat((out, dlabel), 1)
-#         # print(out.shape)
-#         out = self.lin(out)
-#         out = self.sig(out)
-#         return out
-
-
 class Discriminator(nn.Module):
     def __init__(self, ngpu):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
+        self.conv = nn.Sequential(
+            #             torch.Size([32, 3, 64, 64])
 
-        self.l_y = nn.Sequential(
-            nn.Linear(24, ndf * 2 * 16 * 16)
-        )
+            nn.Conv2d(3, 32, 4, 2, 1),
+            nn.BatchNorm2d(32),
+            #             torch.Size([32, 32, 32, 32])
 
-        self.first_conv = nn.Sequential(
-            # input is (nc) x 64 x 64
-            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 32 x 32
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
-        self.second_conv = nn.Sequential(
-            # state size. (ndf*2) x 16 x 16
-            nn.Conv2d(ndf * 2 * 2, ndf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 8 x 8
-            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 4 x 4
-            nn.Flatten(),
-            # nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-            # nn.Sigmoid()
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Linear(in_features=ndf * 8 * 4 * 4, out_features=256),
+            nn.Conv2d(32, 64, 8, 2, 1),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(in_features=256, out_features=128),
+            #             torch.Size([32, 64, 14, 14])
+
+            nn.Conv2d(64, 64, 10, 2, 1),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(in_features=128, out_features=64),
-            nn.LeakyReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(in_features=64, out_features=1),
-            nn.Sigmoid()
+            #             torch.Size([32, 64, 4, 4])
+
+            nn.Flatten()
+            #             torch.Size([32, 1024])
         )
+        self.lin = nn.Sequential(
+            nn.Linear(1048, 512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 512),
+            nn.Dropout(0.4),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 512),
+            nn.Dropout(0.4),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 1),
+        )
+        self.sig = nn.Sigmoid()
 
     def forward(self, input):
-        img, label = input
-        label = self.l_y(label)
-        x = self.first_conv(img)
-        x = torch.cat((x, label.view(-1, ndf * 2, 16, 16)), dim=1)
-        out = self.second_conv(x)
-        out = self.classifier(out)
+        img, dlabel = input
+        out = self.conv(img)
+        # print(dlabel.shape)
+        # print(out.shape)
+        out = torch.cat((out, dlabel), 1)
+        # print(out.shape)
+        out = self.lin(out)
+        out = self.sig(out)
         return out
+
+
+# class Discriminator(nn.Module):
+#     def __init__(self, ngpu):
+#         super(Discriminator, self).__init__()
+#         self.ngpu = ngpu
+#
+#         self.l_y = nn.Sequential(
+#             nn.Linear(24, ndf * 2 * 16 * 16)
+#         )
+#
+#         self.first_conv = nn.Sequential(
+#             # input is (nc) x 64 x 64
+#             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             # state size. (ndf) x 32 x 32
+#             nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+#             nn.BatchNorm2d(ndf * 2),
+#             nn.LeakyReLU(0.2, inplace=True),
+#         )
+#
+#         self.second_conv = nn.Sequential(
+#             # state size. (ndf*2) x 16 x 16
+#             nn.Conv2d(ndf * 2 * 2, ndf * 4, 4, 2, 1, bias=False),
+#             nn.BatchNorm2d(ndf * 4),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             nn.Dropout2d(0.5),
+#             # state size. (ndf*4) x 8 x 8
+#             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+#             nn.BatchNorm2d(ndf * 8),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             nn.Dropout2d(0.5),
+#             # state size. (ndf*8) x 4 x 4
+#             # nn.Flatten(),
+#             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+#             nn.Dropout2d(0.5),
+#             nn.Sigmoid()
+#         )
+#
+#         # self.classifier = nn.Sequential(
+#         #     nn.Linear(in_features=ndf * 8 * 4 * 4, out_features=256),
+#         #     nn.LeakyReLU(),
+#         #     nn.Dropout(0.4),
+#         #     nn.Linear(in_features=256, out_features=128),
+#         #     nn.LeakyReLU(),
+#         #     nn.Dropout(0.4),
+#         #     nn.Linear(in_features=128, out_features=64),
+#         #     nn.LeakyReLU(),
+#         #     nn.Dropout(0.4),
+#         #     nn.Linear(in_features=64, out_features=1),
+#         #     nn.Sigmoid()
+#         # )
+#
+#     def forward(self, input):
+#         img, label = input
+#         label = self.l_y(label)
+#         x = self.first_conv(img)
+#         x = torch.cat((x, label.view(-1, ndf * 2, 16, 16)), dim=1)
+#         out = self.second_conv(x)
+#         # out = self.classifier(out)
+#         return out
 
 
 class SAGenerator(nn.Module):
