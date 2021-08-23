@@ -5,7 +5,7 @@ from torch import nn, optim
 dataroot = "data/celeba"
 
 # Number of workers for dataloader
-workers = 2
+workers = 1
 
 # Batch size during training
 batch_size = 32

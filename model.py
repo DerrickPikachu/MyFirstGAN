@@ -61,26 +61,22 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
         self.conv = nn.Sequential(
-            #             torch.Size([32, 3, 64, 64])
-
-            nn.Conv2d(3, 32, 4, 2, 1),
-            nn.BatchNorm2d(32),
-            #             torch.Size([32, 32, 32, 32])
-
-            nn.Conv2d(32, 64, 8, 2, 1),
-            nn.BatchNorm2d(64),
+            # Size C x 64 x 64
+            nn.Conv2d(3, ndf / 2, 4, 2, 1),
+            nn.BatchNorm2d(ndf / 2),
+            # Size C x 32 x 32
+            nn.Conv2d(ndf / 2, ndf, 8, 2, 1),
+            nn.BatchNorm2d(ndf),
             nn.LeakyReLU(),
-            #             torch.Size([32, 64, 14, 14])
-
-            nn.Conv2d(64, 64, 10, 2, 1),
-            nn.BatchNorm2d(64),
+            # Size C x 14 x 14
+            nn.Conv2d(ndf, ndf, 10, 2, 1),
+            nn.BatchNorm2d(ndf),
             nn.LeakyReLU(),
-            #             torch.Size([32, 64, 4, 4])
-
+            # Size C x 4 x 4
             nn.Flatten()
-            #             torch.Size([32, 1024])
+            # Size 1024
         )
-        self.lin = nn.Sequential(
+        self.linear = nn.Sequential(
             nn.Linear(1048, 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 512),
@@ -90,18 +86,14 @@ class Discriminator(nn.Module):
             nn.Dropout(0.4),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 1),
+            nn.Sigmoid(),
         )
-        self.sig = nn.Sigmoid()
 
     def forward(self, input):
-        img, dlabel = input
+        img, condition = input
         out = self.conv(img)
-        # print(dlabel.shape)
-        # print(out.shape)
-        out = torch.cat((out, dlabel), 1)
-        # print(out.shape)
-        out = self.lin(out)
-        out = self.sig(out)
+        out = torch.cat((out, condition), 1)
+        out = self.linear(out)
         return out
 
 
@@ -134,11 +126,11 @@ class Discriminator2(nn.Module):
             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout2d(0.4),
+            nn.Dropout2d(0.1),
             # state size. (ndf*8) x 4 x 4
             # nn.Flatten(),
             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-            nn.Dropout2d(0.4),
+            nn.Dropout2d(0.1),
             nn.Sigmoid()
         )
 
