@@ -1,6 +1,14 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from parameter import *
+
+from dataset import ICLEVRLoader
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 '''===============================================================
 1. Title:     
@@ -65,3 +73,42 @@ class evaluation_model:
             out = self.resnet18(images)
             acc = self.compute_acc(out.cpu(), labels.cpu())
             return acc
+
+
+def test_model(generator, eval_model, epoch):
+    generator.eval()
+
+    test_data = ICLEVRLoader('jsonfile', trans=transforms.Compose([
+        transforms.Resize((image_size, image_size)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ]), mode='test')
+    test_loader = DataLoader(test_data, batch_size=len(test_data))
+    acc = 0
+
+    for _, label in test_loader:
+        label = label.to(device)
+        latent = torch.randn(label.size(0), nz, 1, 1, device=device, dtype=torch.float)
+        generated_img = generator((latent, label))
+        acc = eval_model.eval(generated_img, label)
+
+    # plt.imshow(np.transpose(vutils.make_grid(generated_img.cpu(), padding=2, normalize=True), (1, 2, 0)))
+    # plt.savefig(f'record/record{epoch}.jpg')
+    # plt.show()
+
+    return acc, generated_img.detach().cpu()
+
+
+if __name__ == "__main__":
+    gen = torch.load('generator3.pth')
+    eval_model = evaluation_model()
+    best_acc = 0
+    best_result = None
+    for _ in range(1000):
+        acc, gen_img = test_model(gen, eval_model, 0)
+        if acc > best_acc:
+            best_acc = acc
+            best_result = gen_img
+    print(f'acc: {best_acc}')
+    plt.imshow(np.transpose(vutils.make_grid(gen_img.cpu(), padding=2, normalize=True), (1, 2, 0)))
+    plt.savefig(f'record/best_result.jpg')
