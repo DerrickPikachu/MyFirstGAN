@@ -100,6 +100,7 @@ def test_model(generator, eval_model, epoch):
 
 
 if __name__ == "__main__":
+    torch.nn.Module.dump_patches = True
     gen = torch.load('generator81.pth')
     eval_model = evaluation_model()
     best_acc = 0

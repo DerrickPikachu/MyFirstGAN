@@ -176,7 +176,7 @@ class SAGenerator(nn.Module):
         )
         self.attn2 = Self_Attn(ngf, 'relu')
         self.conv3 = nn.Sequential(
-            # state size. (ngf) x 32 x 32S
+            # state size. (ngf) x 32 x 32
             nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
             nn.Tanh()
             # state size. (nc) x 64 x 64
@@ -233,7 +233,7 @@ class Self_Attn(nn.Module):
         self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1, bias=False)
         self.gamma = nn.Parameter(torch.zeros(1))
 
-        self.softmax = nn.Softmax(dim=-1)
+        self.softmax = nn.Softmax(dim=-1)  #
 
     def forward(self, x):
         """
