@@ -39,7 +39,7 @@ if __name__ == "__main__":
     eval_model = evaluation_model()
     # netG = Generator(ngpu).to(device)
     netG = SAGenerator(ngpu).to(device)
-    netD = Discriminator2(ngpu).to(device)
+    netD = Discriminator(ngpu).to(device)
     setup(netG)
     setup(netD)
 

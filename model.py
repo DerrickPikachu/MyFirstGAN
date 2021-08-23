@@ -62,10 +62,10 @@ class Discriminator(nn.Module):
         self.ngpu = ngpu
         self.conv = nn.Sequential(
             # Size C x 64 x 64
-            nn.Conv2d(3, ndf / 2, 4, 2, 1),
-            nn.BatchNorm2d(ndf / 2),
+            nn.Conv2d(3, ndf // 2, 4, 2, 1),
+            nn.BatchNorm2d(ndf // 2),
             # Size C x 32 x 32
-            nn.Conv2d(ndf / 2, ndf, 8, 2, 1),
+            nn.Conv2d(ndf // 2, ndf, 8, 2, 1),
             nn.BatchNorm2d(ndf),
             nn.LeakyReLU(),
             # Size C x 14 x 14
@@ -133,20 +133,6 @@ class Discriminator2(nn.Module):
             nn.Dropout2d(0.1),
             nn.Sigmoid()
         )
-
-        # self.classifier = nn.Sequential(
-        #     nn.Linear(in_features=ndf * 8 * 4 * 4, out_features=256),
-        #     nn.LeakyReLU(),
-        #     nn.Dropout(0.4),
-        #     nn.Linear(in_features=256, out_features=128),
-        #     nn.LeakyReLU(),
-        #     nn.Dropout(0.4),
-        #     nn.Linear(in_features=128, out_features=64),
-        #     nn.LeakyReLU(),
-        #     nn.Dropout(0.4),
-        #     nn.Linear(in_features=64, out_features=1),
-        #     nn.Sigmoid()
-        # )
 
     def forward(self, input):
         img, label = input
